@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  db:
+    container_name: ${PROJECT_NAME}_database
+    image: postgres:14
+    volumes:
+      - ${PROJECT_NAME}_database_data:/var/lib/postgresql/data
+    ports:
+      - ${POSTGRES_HOST_PORT}:${POSTGRES_PORT}
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    restart: always
+
+  migrations:
+    container_name: ${PROJECT_NAME}_migrations
+    build:
+      context: ../
+      dockerfile: deploy/DockerfileBackend
+    command: ["make", "migrate_up"]
+    env_file:
+      - .env
+    depends_on:
+      - db
+
+  backend: 
+    container_name: ${PROJECT_NAME}_backend
+    build:
+      context: ../
+      dockerfile: deploy/DockerfileBackend
+    command: ["make", "backend_run"]
+    ports:
+      - ${BACKEND_HOST_PORT}:${BACKEND_PORT}
+    env_file:
+      - .env
+    volumes:
+      - ../files_download:/files_download
+      - ../files_storage:/files_storage
+      - ../logs:/logs
+    depends_on:
+      migrations:
+        condition: service_started
+    restart: always
+
+volumes:
+ api_database_data:
