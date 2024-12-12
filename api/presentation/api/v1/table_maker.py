@@ -10,4 +10,5 @@ router = APIRouter()
     )
 async def table_maker_3():
     TableMaker3.make_excel()
-    return FileResponse("api/infrastructure/excel/table_maker_3.xlsx")
+    headers = {'Access-Control-Expose-Headers': 'Content-Disposition'}
+    return FileResponse("api/infrastructure/excel/table_maker_3.xlsx", filename="table_maker_3.xlsx", headers=headers)
