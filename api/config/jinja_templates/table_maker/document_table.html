@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Document Table</title>
+        <style>
+            *
+        {
+            margin: 0;
+            padding: 0;
+        }
+
+        .body
+        {
+            background-color: rgb(26, 26, 26);
+            display: flex;
+        }
+
+        .widjet_place
+        {
+            /*background-color: rgb(148, 26, 26);*/
+            width: 7%;
+            height: 100vh;
+            justify-content: center;
+        }
+
+        .widjet
+        {
+            /*background-color: rgb(61, 110, 117);*/
+            height: 10%;
+            margin: 5%;
+            padding: 5%;
+        }
+
+        .main
+        {
+            /*background-color: rgb(61, 110, 26);*/
+            width: 93%;
+            height: 100vh;
+            justify-content: center;
+        }
+
+        .list_table
+        {
+            /*background-color: rgb(61, 110, 191);*/
+            margin: 1%;
+            padding: 5%;
+            height: 30vh;
+        }
+
+        .list_row
+        {
+            /*background-color: rgb(168, 110, 191);*/
+            width: 100%;
+            height: 50%;
+            margin: 1%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .button_table
+        {
+            /*background-color: rgb(31, 224, 191);*/
+            width: 50%;
+            height: 80%;
+            margin: 1%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .TableMaker
+        {
+            margin: 1%;
+            width: 50%;
+            height: 50%;
+        }
+
+
+        .parent_download_label
+        {
+            /*background-color: rgb(245, 132, 96);*/
+            height: 10vh;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .download_label
+        {
+            /*background-color: rgb(180, 132, 96);*/
+            height: 10vh;
+            width: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        </style>
+    </head>
+    <body class="body">
+        <div class="widjet_place">
+        	<div class="widjet"></div>
+        	<div class="widjet"></div>
+        	<div class="widjet"></div>
+        	<div class="widjet"></div>
+        	<div class="widjet"></div>
+        </div>
+        <div class="main">
+        	<div class="list_table">
+        		<div class="list_row">
+                    <div class="button_table">
+                        <button class="TableMaker" data-to="" id="button1">Приложение №1</button>
+                    </div>
+                    <div class="button_table">
+                        <button class="TableMaker" data-to="http://localhost:8000/table_maker/metrics" id="button3">Приложение №3</button>
+                    </div>
+        		</div>
+	        	<div class="list_row">
+	        		<div class="button_table">
+                        <button class="TableMaker" data-to="" id="button4">Приложение №4</button>
+                    </div>
+                    <div class="button_table">
+                        <button class="TableMaker" data-to="" id="button5">Приложение №5</button>
+                    </div>
+	        	</div>
+        	</div>
+        	<div class="parent_download_label">
+        		<div class="download_label" id = "download_label">
+        		
+        		</div>
+        	</div>
+        </div>
+
+        <script src="../static/js/script.js"></script>
+        <script src="../static/js/redirect_btn_script.js"></script>
+
+    </body>
+</html>

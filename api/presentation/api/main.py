@@ -5,6 +5,7 @@ from fastapi import FastAPI, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
+from starlette.staticfiles import StaticFiles
 
 from api.config.settings import Settings
 from api.presentation.api.di.di import setup_di
@@ -24,7 +25,6 @@ def create_app() -> FastAPI:
         root_path=settings.site_api_path,
         docs_url=settings.docs_url,
     )
-
     app.include_router(router)
     setup_di(app, settings)
     set_custom_openapi(app, settings)
@@ -34,7 +34,6 @@ def create_app() -> FastAPI:
 
 
 app = create_app()
-
 
 @app.exception_handler(ValidationError)
 @app.exception_handler(RequestValidationError)

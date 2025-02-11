@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Таблица метрик</title>
+    
+    {% include 'common/parametr_form_script.html' %}
+    <script>
+        
+        $(document).ready(window_onload);
+        
+        function window_onload()
+        {
+
+            $("#year input").on('input',
+                                function () {
+                                    $("#select-quarter").val('');
+                                    hide_all($("#select-quarter"));
+
+                                    if ($(this).val() != '') {
+                                        $("#select-quarter").parent().show()
+                                    }
+
+                                }
+            )
+
+            $("#select-quarter").on('change', 
+                                    {url: "/parametrs_form/get_department",
+                                    el: $("#select-department"),
+                                    text: "Выберите кафедру",
+                                    callback: select_get},
+                                    on_change);
+            $("#select-department").on('change', 
+                                        {url: "/parametrs_form/get_employees",
+                                        el: $("#select-fio"),
+                                        text: "Выберите заведующего кафедрой",
+                                        callback: select_get,
+                                        params: {'quarter': $("#select-quarter"), 'id_choise_depart': $("#select-department"),
+                                        'year': $("#year input")}},
+                                        on_change);
+            $("#select-fio").on('change', 
+                                        {url: "/parametrs_form/get_metrics",
+                                        el: $("#submit-button"),
+                                        text: "Выберите метрику",
+                                        callback: function (resp, status) {
+                                            $("#submit-button").parent().show();
+                                            $("#year").parent().show();
+                                        },
+                                        params: {'quarter': $("#select-quarter")}},
+                                        on_change);
+
+            $("#form").on('submit', on_click);
+            $("#form-button").on('click', {url: "/page/parametr"},
+                                            redirect);
+            $("#summary-button").on('click', {url: "/page/summary_table"},
+                                            redirect);
+        }
+        function on_click() {
+            let quarter = parseInt($("#select-quarter").val());
+            let fio = parseInt($("#select-fio").val());
+            let year = parseInt($("#year input").val());
+            let department_id = parseInt($("#select-department").val());
+
+            data = JSON.stringify({
+                "quarter": quarter,
+                "employee_id": fio,
+                "year": year,
+                "department_id": department_id
+            });
+            $.ajax({
+                type: 'PATCH',
+                url: "/summary_table/get_metrics",
+                data: data,
+                error: function(data) { console.log(data); },
+                success: function(data, status) { parse_data(data, status); },
+                contentType: "application/json",
+                dataType: 'json'
+            });
+
+            return false;
+        }
+
+        function parse_data(resp, status){
+            if (status != "success" || resp.status != "OK")
+            {
+                console.log("Error:", resp.status);
+                return;
+            }
+            let $table_body = $("#table-body");
+            $table_body.html("");
+
+            for (let i = 0; i < resp.data.work_day.length; i++)
+            {
+                const metric = resp.data;
+                $table_body.append(
+                    $("<tr>").append($("<th>").attr("scope", "row").text(i + 1))
+                             .append($("<td>").text(metric.metrics[i]))
+                             .append($("<td>").text(metric.metrics_value[i]))
+                             .append($("<td>").text(metric.duration[i]))
+                             .append($("<td>").text(metric.work_day[i]))
+                             .append($("<td>").text(metric.employee_day[i]))
+                             .append($("<td>").text(metric.koff[i]))
+                             .append($("<td>").text(metric.metrics_value_koff[i]))
+                );
+            }
+
+            $table_body.parent().show();
+        }
+    </script>
+</head>
+<body>
+
+    <div class="justify-content-center" style="width: 10%;">
+        <div class="row justify-content-center">
+            <div class="col-md-4 my-2" style="width: 50%;">
+                <button  id="form-button" class="btn btn-primary">Форма показателей</button>
+            </div>
+        </div>
+        <div class="row justify-content-center">
+            <div class="col-md-4 my-2" >
+                <button  id="summary-button" class="btn btn-success">Сводная таблица</button>
+            </div>
+        </div>
+    </div>
+    <form id="form" class="needs-validation">
+        {% include 'common/common_table.html' %}
+        <div class="row justify-content-center">
+            <div class="col-md-4 my-2" style="display: none;">
+                <button type="submit" id="submit-button" class="btn btn-primary hiding" style="width: 100%;">Поиск</button>
+            </div>
+        </div>
+        <table class="table" style="display: none;">
+            <thead>
+              <tr>
+                <th scope="col">№</th>
+                <th scope="col">Наименование показателя</th>
+                  <th scope="col">Значение показателя</th>
+                <th scope="col">Продолжительность</th>
+                <th scope="col">Колличество плановых рабочих дней за период</th>
+                <th scope="col">Количество отработанных дней за период</th>
+                <th scope="col">Коэффициент</th>
+                  <th scope="col">Значение показателя * коэффициент</th>
+              </tr>
+              <tbody id="table-body" class="hiding">
+              </tbody>
+            </thead>
+        </table>
+    </form>
+
+
+    
+</body>
+</html>

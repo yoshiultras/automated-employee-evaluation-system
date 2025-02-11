@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Форма ввода метрик</title>
+    
+    {% include 'common/parametr_form_script.html' %}
+    <script>
+
+        function window_onload()
+        {
+            $("#year input").on('input',
+                                function () {
+                                    $("#select-quarter").val('');
+                                    hide_all($("#select-quarter"));
+
+                                    if ($(this).val() != '') {
+                                        $("#select-quarter").parent().show()
+                                    }
+
+                                }
+            )
+
+            $("#select-quarter").on('change', 
+                                    {url: "/parametrs_form/get_department",
+                                    el: $("#select-department"),
+                                    text: "Выберите кафедру",
+                                    callback: select_get},
+                                    on_change);
+            $("#select-department").on('change', 
+                                        {url: "/parametrs_form/get_employees",
+                                        el: $("#select-fio"),
+                                        text: "Выберите заведующего кафедрой",
+                                        callback: select_get,
+                                        params: {'quarter': $("#select-quarter"), 'id_choise_depart': $("#select-department"),
+                                        'year': $("#year input")}},
+                                        on_change);
+            $("#select-fio").on('change', 
+                                        {url: "/parametrs_form/get_metrics",
+                                        el: $("#metrics"),
+                                        text: "Выберите метрику",
+                                        callback: metrics_get,
+                                        params: {'quarter': $("#select-quarter")}},
+                                        on_change);
+
+            $("#form").on('send', on_click);
+            $("#form-button").on('click', {url: "/page/parametr"},
+                                            redirect);
+            $("#summary-button").on('click', {url: "/page/summary_table"},
+                                            redirect);
+        }
+        
+        $(document).ready(window_onload);
+
+        class Metric {
+            constructor(id, name_metric) {
+                this.id = id;
+                this.value = name_metric;
+            }
+        }
+
+        function on_click() {
+            let quarter = parseInt($("#select-quarter").val());
+            let fio = parseInt($("#select-fio").val());
+            let year = parseInt($("#year input").val());
+            let metrics = [];
+
+            $(".parse").each(function() {
+                let id = parseInt($(this).attr("data-id"));
+                let val = parseInt($(this).val());
+                metrics.push(new Metric(id, val));
+            });
+
+            data = JSON.stringify({
+                "quarter": quarter,
+                "employee_id": fio,
+                "year": year,
+                "metrics": metrics
+            });
+            $.ajax({
+                type: 'POST',
+                url: "/parametrs_form/post_metrics",
+                data: data,
+                error: function(data) { console.log(data); },
+                contentType: "application/json",
+                dataType: 'json'
+            });
+
+            return false;
+        }
+    </script>
+</head>
+<body>
+    <div class="widjet_place">
+        	<div class="justify-content-center" style="width: 10%;">
+                <div class="row justify-content-center">
+                    <div class="col-md-4 my-2" style="width: 50%;">
+                        <button  id="form-button" class="btn btn-success">Форма показателей</button>
+                    </div>
+                </div>
+                <div class="row justify-content-center">
+                    <div class="col-md-4 my-2" >
+                        <button  id="summary-button" class="btn btn-primary">Сводная таблица</button>
+                    </div>
+                </div>
+            </div>
+    </div>
+        <div class="main">
+            <form id="form" class="needs-validation">
+                {% include 'common/common_table.html' %}
+                <div class="row justify-content-center">
+                    <div class="col-md-4 my-2" style="display: none;">
+                        <div id="metrics" class="metrics hiding my-2 form-floating" style="width: 100%;">
+                    </div>
+                </div>
+                <div class="row justify-content-center">
+                    <div class="col-md-4 my-2" style="display: none;">
+                        <input type="submit" class="btn btn-primary hiding" id="submit-button" style="width: 100%;" required>
+                    </div>
+                </div>
+            </form>
+        </div>
+    <script>
+        /*let selectElements = document.querySelectorAll("select");
+        let quarter = document.getElementById("select-quarter")
+        let departments;
+        let employees;
+        let metrics;
+
+        for (const slt of selectElements){
+            slt.addEventListener("change", async(event) => {
+
+                if (slt.id == "select-quarter") {
+                    let url = "/parametrs_form/get_department" ;
+
+                    const res = await fetch(url, {
+                        method: "GET",
+                        headers: {
+                          "Content-Type": "application/json",
+                        },
+                    });
+                    request = (await res.json());
+                    status = request.status;
+                    departments = request.data;
+
+                    let selectHTML = '';
+                    selectHTML += `<option value="">Выберите кафедру</option>`;
+                    // Циклом обходим объект, полученный из LS и записываем в selectHTML
+                    for (const key in departments) {
+                       selectHTML += `<option value="${key}">${departments[key]}</option>`;
+                    }
+
+                    // Выбираем наш выпадающий список и записываем в него обработанные ранее данные
+                    document.getElementById("select-department").innerHTML = selectHTML;
+                }
+
+                if (slt.id == "select-department") {
+                    departments = document.getElementById("select-department")
+                    value_quarter = quarter.options[quarter.selectedIndex].value;
+                    value_depart = departments.options[departments.selectedIndex].value;
+
+                    let url = "/parametrs_form/get_employees?quarter="+value_quarter + "&id_choise_depart=" + value_depart ;
+
+                    const res = await fetch(url, {
+                        method: "GET",
+                        headers: {
+                          "Content-Type": "application/json",
+                        },
+                    });
+                    request = (await res.json());
+                    status = request.status;
+                    employees = request.data;
+
+                    let selectHTML = '';
+                    selectHTML += `<option value="">Выберите заведующего кафедрой</option>`;
+                    // Циклом обходим объект, полученный из LS и записываем в selectHTML
+                    for (const key in employees) {
+                       selectHTML += `<option value="${key}">${employees[key]}</option>`;
+                    }
+
+                    // Выбираем наш выпадающий список и записываем в него обработанные ранее данные
+                    document.getElementById("select-fio").innerHTML = selectHTML;
+                }
+
+                if (slt.id == "select-fio") {
+                    employees = document.getElementById("select-fio")
+                    value_quarter = quarter.options[quarter.selectedIndex].value;
+
+                    let url = "/parametrs_form/get_metrics?quarter="+value_quarter ;
+
+                    const res = await fetch(url, {
+                        method: "GET",
+                        headers: {
+                          "Content-Type": "application/json",
+                        },
+                    });
+                    request = (await res.json());
+                    status = request.status;
+                    metrics = request.data;
+                    let selectHTML = '';
+
+                    for (let metric in metrics) {
+                        selectHTML += `<label>${metric["name_metric"]}</label>`;
+                        selectHTML += `<input data-iid="${metric["id"]}">${metric["name_metric"]}</label>`;
+                    }
+
+                    document.getElementById("metrics").innerHTML = selectHTML;
+                }
+
+            });
+        }*/
+    </script>
+
+
+</body>
+</html>

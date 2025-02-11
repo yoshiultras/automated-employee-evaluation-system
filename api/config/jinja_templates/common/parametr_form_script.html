@@ -1,0 +1,94 @@
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+
+<script>
+
+function select_get(resp, status, el, text){
+    if (status != "success" || resp.status != "OK")
+    {
+        console.log("Error:", status);
+        return;
+    }
+    
+    $(el).html("");
+
+    el.append($("<option>").val("").text(text));
+    $.each(resp.data, function(key, value) {
+        el.append($("<option>").val(key).text(value));
+    });
+
+    $(el).parent().show();
+}
+function metrics_get(resp, status, el, text){
+
+    if (status != "success" || resp.status != "OK")
+    {
+        console.log("Error:", status);
+        return;
+    }
+
+    $(el).html("");
+
+    $.each(resp.data, function(key, metric) {
+
+        el.append(
+            $("<div>").attr("class", "form-floating").append($("<input>").attr("data-id", metric.id).attr({"class": "form-control parse", "type": "number", "id": "metric-" + metric.id, "placeholder": 0, "required": true}))
+                      .append($("<label>").attr({"for": "metric-" + metric.id}).text(metric.name_metric)))
+          .append("<br>");
+    });
+
+    $(el).parent().show();
+
+    $("#year").parent().show();
+    $("#submit-button").parent().show();
+}
+
+function hide_all(from = null)
+{
+    let hide = from == null;
+    let els = $(".hiding");
+    for (let el of els)
+    {
+        if (from != null && $(el).is(from))
+        {
+            hide = true;
+        }
+        if (hide)
+        {
+            $(el).parent().hide();
+        }
+    }
+}
+
+function on_change(e)
+{
+    let val = $(this).val();
+
+    hide_all(e.data.el);
+
+    if (val == "")
+    {
+        return;
+    }
+
+    let url = e.data.url;
+    let get_params = {};
+
+    for (const key in e.data.params) {
+        get_params[key] = e.data.params[key].val();
+    }
+
+    $.get(url, get_params, function(resp, status){
+        e.data.callback(resp, status, e.data.el, e.data.text);
+    });
+}
+function redirect (e)
+{
+    let url = e.data.url
+    window.location.replace(url);
+
+}
+
+</script>
