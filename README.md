@@ -36,7 +36,7 @@
 4. **Установите зависимости**:
 
     ```bash
-    pip install -r requirements.txt
+    pip install -r req.txt
     ```
 5. **Создайте в корневой папке и заполните .env файл**:
     
