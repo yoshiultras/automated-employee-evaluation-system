@@ -16,11 +16,11 @@ from api.infrastructure.storage.sqlalchemy.models.schemas import *
 router = APIRouter(
 )
 
-@router.patch(
-    path= "/get_metrics",
+@router.get(
+    path= "/metrics",
     status_code=status.HTTP_200_OK,
 )
-async def get_metrics (get_for_metrics: Get_For_Metrics, sessions: AsyncSession = Depends(get_async_session)):
+async def get_metrics (get_for_metrics: GetForMetrics, sessions: AsyncSession = Depends(get_async_session)):
 
     query = select(metrics_in_quartal).where(metrics_in_quartal.c.quartal == get_for_metrics.quarter)
     result = await sessions.execute(query)

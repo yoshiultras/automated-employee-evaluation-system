@@ -1,20 +1,20 @@
 from pydantic import BaseModel
 
-class Post_Metrics (BaseModel):
+class PostMetrics (BaseModel):
     quarter: int
     year: int
     employee_id: int
     metrics: dict[int , int]
 
-class Get_For_Metrics (BaseModel):
+class GetForMetrics (BaseModel):
     quarter: int
     year: int
     employee_id: int
     department_id: int
 
-class Get_Quarter (BaseModel):
+class GetQuarter (BaseModel):
     quarter: int
 
-class Get_Quarter_and_Depart:
+class GetQuarterAndDepartment:
     quarter: int
-    id_depart: int
+    department_id: int

@@ -16,7 +16,7 @@ router = APIRouter(
 )
 
 @router.get(
-    path= "/get_department",
+    path= "/departments",
     status_code=status.HTTP_200_OK,
 )
 async def get_department (sessions: AsyncSession = Depends(get_async_session)):
@@ -25,19 +25,19 @@ async def get_department (sessions: AsyncSession = Depends(get_async_session)):
     result = await sessions.execute(query)
     list_departments = result.all()
 
-    data_departmets = dict()
+    data_departments = dict()
 
     for depart in list_departments:
-        data_departmets[depart[0]] = depart[1]
+        data_departments[depart[0]] = depart[1]
 
     if list_departments == None:
         return {"status": "Empty department"}
 
     return {"status": "OK",
-            "data": data_departmets}
+            "data": data_departments}
 
 @router.get(
-    path= "/get_employees",
+    path= "/employees",
     status_code=status.HTTP_200_OK,
 )
 async def get_employees (quarter: int, id_choise_depart: int, year: int, sessions: AsyncSession = Depends(get_async_session)):
@@ -113,7 +113,7 @@ async def get_employees (quarter: int, id_choise_depart: int, year: int, session
             "data": return_employees}
 
 @router.get(
-    path= "/get_metrics",
+    path= "/metrics",
     status_code=status.HTTP_200_OK,
 )
 async def get_metrics (quarter: int, sessions: AsyncSession = Depends(get_async_session)):
@@ -155,10 +155,10 @@ async def get_metrics (quarter: int, sessions: AsyncSession = Depends(get_async_
             "data": data_metrics}
 
 @router.post(
-    path= "/post_metrics",
+    path= "/metrics",
     status_code=status.HTTP_200_OK,
 )
-async def post_metrics (post_metrics: Post_Metrics, sessions: AsyncSession = Depends(get_async_session)):
+async def post_metrics (post_metrics: PostMetrics, sessions: AsyncSession = Depends(get_async_session)):
 
     query = select(employees_to_metrics.c.id)
     result = await sessions.execute(query)
