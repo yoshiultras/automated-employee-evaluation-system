@@ -40,6 +40,7 @@ class Settings:
     domain: str = field(init=False)
     client_domain: str = field(init=False)
     https: bool = field(init=False)
+    cors_allow_origins: list = field(init=False)
 
     host: str = field(init=False)
     port: int = field(init=False)
@@ -56,6 +57,7 @@ class Settings:
         self.client_domain = get_from_env("CLIENT_DOMAIN")
         self.https = get_from_env("HTTPS") == "true"
         self.http_protocol = "https" if self.https else "http"
+        self.cors_allow_origins = ["*"]
 
         self.host = get_from_env("BACKEND_HOST")
         self.port = int(get_from_env("BACKEND_PORT"))
