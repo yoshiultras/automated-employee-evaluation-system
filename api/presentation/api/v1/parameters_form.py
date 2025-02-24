@@ -4,37 +4,41 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 
 from api.infrastructure.storage.sqlalchemy.models.asos_models import (employees, roles, faculties_and_institutes,
-                                                                      departments, metric_descriptions, sections,
-                                                                      metrics_in_quartal, actual_working_days_on_employee,
-                                                                      actual_working_days, employees_to_metrics)
+                                                                      metrics_in_quartal,
+                                                                      actual_working_days_on_employee,
+                                                                      actual_working_days, employees_to_metrics,
+                                                                      Department, MetricDescription)
+
 
 from api.infrastructure.storage.sqlalchemy.session_maker import get_async_session
 
 from api.infrastructure.storage.sqlalchemy.models.schemas import *
+from api.presentation.api.v1.dto.department import DepartmentResponse
 
 router = APIRouter(
 )
 
 @router.get(
-    path= "/departments",
+    path="/departments",
     status_code=status.HTTP_200_OK,
+    response_model=list[DepartmentResponse],  # Указываем модель ответа
 )
 async def get_department (sessions: AsyncSession = Depends(get_async_session)):
-
-    query = select(departments)
+    query = select(Department)
     result = await sessions.execute(query)
-    list_departments = result.all()
+    list_departments = result.scalars().all()
 
-    data_departments = dict()
+    # Если данные отсутствуют
+    if not list_departments:
+        return []
 
-    for depart in list_departments:
-        data_departments[depart[0]] = depart[1]
+    # Преобразуем результаты SQLAlchemy в Pydantic-модели
+    departments_response = [
+        DepartmentResponse.model_validate(department)  # Преобразование ORM -> Pydantic
+        for department in list_departments
+    ]
 
-    if list_departments == None:
-        return {"status": "Empty department"}
-
-    return {"status": "OK",
-            "data": data_departments}
+    return departments_response
 
 @router.get(
     path= "/employees",
@@ -128,7 +132,7 @@ async def get_metrics (quarter: int, sessions: AsyncSession = Depends(get_async_
     metrics_id = list_metrics[3]
     durations = list_metrics[2]
 
-    query = select(metric_descriptions)
+    query = select(MetricDescription)
     result = await sessions.execute(query)
     list_metrics = result.all()
 

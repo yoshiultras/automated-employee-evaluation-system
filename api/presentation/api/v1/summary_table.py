@@ -4,10 +4,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 
 from api.infrastructure.storage.sqlalchemy.models.asos_models import (employees, roles, faculties_and_institutes,
-                                                                      departments, metric_descriptions, sections,
                                                                       metrics_in_quartal,
                                                                       actual_working_days_on_employee,
-                                                                      actual_working_days, employees_to_metrics)
+                                                                      actual_working_days, employees_to_metrics,
+                                                                      MetricDescription)
 
 from api.infrastructure.storage.sqlalchemy.session_maker import get_async_session
 
@@ -47,7 +47,7 @@ async def get_metrics (get_for_metrics: GetForMetrics, sessions: AsyncSession = 
     else:
         list_metrics_value = row_metrics_value[0]
 
-    query = select(metric_descriptions)
+    query = select(MetricDescription)
     result = await sessions.execute(query)
     list_metrics = result.all()
 
