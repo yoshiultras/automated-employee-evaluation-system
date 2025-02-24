@@ -6,12 +6,6 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from api.config import Settings
-from api.core.exceptions import (
-    AlreadyExistsInteractorErr,
-    EntityAttrErr,
-    NotFoundInteractorErr,
-    RepositoryErr,
-)
 from api.presentation.api.v1.dto import HTTPException
 
 logger = logging.getLogger(__name__)
@@ -25,35 +19,6 @@ async def error_header(
     err_content = None
     try:
         response = await call_next(request)
-    except AlreadyExistsInteractorErr as e:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content=HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=str(e),
-                errors={e.attr_err.attr_name: [e.attr_err.err_msg]},
-            ).model_dump(),
-        )
-    except NotFoundInteractorErr as e:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content=HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                errors=str(e),
-            ).model_dump(),
-        )
-    except EntityAttrErr as e:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content=HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=str(e),
-                errors={e.attr_name: [e.err_msg]},
-            ).model_dump(),
-        )
-    except RepositoryErr as e:
-        logger.error(str(e), exc_info=True)
-        err_content = "error"
     except Exception as e:
         logger.error(str(e), exc_info=True)
         err_content = "error"

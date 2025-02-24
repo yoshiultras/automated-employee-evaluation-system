@@ -7,6 +7,22 @@ from sqlalchemy.orm import declarative_base
 metadata = MetaData()
 Base = declarative_base()
 
+#TODO Переделать все модели в классы в соответствии с Departments
+
+# departments = Table(
+#
+#     "departments",
+#     metadata,
+#     Column("id", Integer, primary_key=True, autoincrement=True),
+#     Column("name_of_department", String, nullable=False),
+#     Column("affiliation", Integer,ForeignKey("faculties_and_institutes.id"), nullable=False),
+#
+# )
+class Department(Base):
+    __tablename__ = 'departments'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name_of_department = Column(String, nullable=False)
+    affiliation = Column(Integer, ForeignKey("faculties_and_institutes.id"), nullable=False)
 employees = Table(
 
     "employees",
@@ -37,21 +53,6 @@ faculties_and_institutes = Table(
     Column("name", String, nullable=False),
 
 )
-
-# departments = Table(
-#
-#     "departments",
-#     metadata,
-#     Column("id", Integer, primary_key=True, autoincrement=True),
-#     Column("name_of_department", String, nullable=False),
-#     Column("affiliation", Integer,ForeignKey("faculties_and_institutes.id"), nullable=False),
-#
-# )
-class Department(Base):
-    __tablename__ = 'departments'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    name_of_department = Column(String, nullable=False)
-    affiliation = Column(Integer, ForeignKey("faculties_and_institutes.id"), nullable=False)
 
 class MetricDescription(Base):
     __tablename__ = 'metric_descriptions'
