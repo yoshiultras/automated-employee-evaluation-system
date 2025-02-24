@@ -4,10 +4,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 
 from api.infrastructure.storage.sqlalchemy.models.asos_models import (employees, roles, faculties_and_institutes,
+                                                                      Department, MetricDescription, Section,
                                                                       metrics_in_quartal,
                                                                       actual_working_days_on_employee,
-                                                                      actual_working_days, employees_to_metrics,
-                                                                      MetricDescription)
+                                                                      actual_working_days, employees_to_metrics)
 
 from api.infrastructure.storage.sqlalchemy.session_maker import get_async_session
 
