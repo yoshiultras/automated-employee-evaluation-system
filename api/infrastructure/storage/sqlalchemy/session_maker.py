@@ -1,9 +1,12 @@
 import os
 from typing import AsyncGenerator
 
+from dotenv import load_dotenv
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+
+load_dotenv()
 
 DB_HOST = os.getenv('POSTGRES_HOST')
 DB_NAME = os.getenv('POSTGRES_DB')

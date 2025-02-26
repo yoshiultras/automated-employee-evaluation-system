@@ -1,6 +1,5 @@
 import openpyxl
 import openpyxl.styles
-from api.presentation.api.v1.table_maker_3.database import Database as db
 
 class TableMaker3:
     # Метод для форматирования границ таблицы
@@ -46,28 +45,26 @@ class TableMaker3:
 
 
     # Метод для формирования Excel таблицы
-    def make_excel():
-        # Получаем метрики из базы данных
-        data = db.get_metrics()
+    def make_excel(metrics, sections):
         # Создаем книгу и заполняем ее
         wb = openpyxl.load_workbook("api/presentation/api/v1/table_maker_3/template.xltx")
         wb.template = False
-
+        print(metrics, sections)
         # получаем лист, с которым будем работать
         sheet = wb['Метрики']
         ws = wb.active
 
-        sections = db.get_sections()
+        print(metrics[0].to_array(), sections[0].to_array())
         current_row = 5
         current_category = 0
         counter = 0
         need_to_medium = []
         need_to_medium_up = [3]
         need_to_medium_down = []
-        for row in range(len(data)):
+        for row in range(len(metrics)):
 
             # Вставка категорий
-            if current_category != int(data[row].section_id):
+            if current_category != int(metrics[row].section_id):
                 ws.insert_rows(current_row)
                 current_category += 1
                 sheet.cell(row=current_row, column=1).value = sections[current_category - 1].description
@@ -77,7 +74,7 @@ class TableMaker3:
                 need_to_medium.append(str(current_row))
                 current_row += 1
 
-            formatted_data = data[row].to_array()
+            formatted_data = metrics[row].to_array()
             # Заполнение строк
             for col in range(len(formatted_data) - 1):
                 cell = sheet.cell(row=current_row, column=col + 1)
@@ -90,8 +87,8 @@ class TableMaker3:
                     continue
 
             # Слияние ячеек с номерам критериев
-            if row + 1 < len(data):
-                if formatted_data[0] == data[row+1].to_array()[0]:
+            if row + 1 < len(metrics):
+                if formatted_data[0] == metrics[row + 1].to_array()[0]:
                     counter += 1
                     if counter == 1:
                         need_to_medium_up.append(current_row)
@@ -112,6 +109,3 @@ class TableMaker3:
 
         # Сохранение файла
         wb.save('api/infrastructure/excel/table_maker_3.xlsx')
-       
-
-TableMaker3.make_excel()
