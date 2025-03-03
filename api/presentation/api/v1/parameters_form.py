@@ -48,13 +48,13 @@ async def get_employees (quarter: int, id_choise_depart: int, year: int, session
 
     query = select(MetricsInQuartal).where(MetricsInQuartal.quartal == quarter)
     result = await sessions.execute(query)
-    list_metrics = result.one_or_none()
+    list_metrics = result.scalars().all()
 
     if list_metrics == None:
         return {"status": "Empty metrics"}
 
-    metrics_id = list_metrics[3]
-    durations = list_metrics[2]
+    metrics_id = list_metrics[0].metrics_id
+    durations = list_metrics[0].duration
 
     max_duration = max(durations)
 
@@ -124,25 +124,24 @@ async def get_metrics (quarter: int, sessions: AsyncSession = Depends(get_async_
 
     query = select(MetricsInQuartal).where(MetricsInQuartal.quartal == quarter)
     result = await sessions.execute(query)
-    list_metrics = result.one_or_none()
-
+    list_metrics = result.scalars().all()
     if list_metrics == None:
         return {"status": "Empty metrics"}
 
-    metrics_id = list_metrics[3]
-    durations = list_metrics[2]
+    metrics_id = list_metrics[0].metrics_id
+    durations = list_metrics[0].duration
 
     query = select(MetricDescription)
     result = await sessions.execute(query)
-    list_metrics = result.all()
+    list_metrics = result.scalars().all()
 
     metrics = dict()
 
     for metric in list_metrics:
-        buf = str(metric[2])
+        buf = str(metric.metric_subnumber)
         if buf == "None":
             buf = ""
-        metrics[metric[0]] = str(metric[1]) + buf
+        metrics[metric.metric_id] = str(metric.metric_number) + buf
 
     data_metrics = list()
 
@@ -168,17 +167,11 @@ async def post_metrics (post_metrics: PostMetrics, sessions: AsyncSession = Depe
     result = await sessions.execute(query)
     list_res = result.all()
 
-    list_id = list()
-
-    for res in list_res:
-        list_id.append(res[0])
-
-    id = max(list_id) + 1
+    id = max(res[0] for res in list_res) + 1 if list_res else 0
 
     data = {
         "id": id,
-        "metrics_id": post_metrics.metrics_id,
-        "value": post_metrics.value,
+        "metrics_id": post_metrics.metrics,
         "year": post_metrics.year,
         "quarter": post_metrics.quarter,
         "employee_id": post_metrics.employee_id
