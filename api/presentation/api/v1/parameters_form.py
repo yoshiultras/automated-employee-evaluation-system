@@ -46,7 +46,7 @@ async def get_department (sessions: AsyncSession = Depends(get_async_session)):
 )
 async def get_employees (quarter: int, id_choise_depart: int, year: int, sessions: AsyncSession = Depends(get_async_session)):
 
-    query = select(MetricsInQuartal).where(MetricsInQuartal.c.quartal == quarter)
+    query = select(MetricsInQuartal).where(MetricsInQuartal.quartal == quarter)
     result = await sessions.execute(query)
     list_metrics = result.one_or_none()
 
@@ -77,15 +77,15 @@ async def get_employees (quarter: int, id_choise_depart: int, year: int, session
             max_quarter_last_year = 4
             min_quarter_last_year = max(1, max_quarter_last_year - max_duration)
 
-    query = select(ActualWorkingDaysOnEmployee.c.employee_id).where(
-        ActualWorkingDaysOnEmployee.c.department_id == id_choise_depart
+    query = select(ActualWorkingDaysOnEmployee.employee_id).where(
+        ActualWorkingDaysOnEmployee.department_id == id_choise_depart
     ).where(
-        or_(and_(ActualWorkingDaysOnEmployee.c.quarter <= max_quarter_this_year,
-                 ActualWorkingDaysOnEmployee.c.quarter >= min_quarter_this_year,
-                 ActualWorkingDaysOnEmployee.c.year == year),
-            and_(ActualWorkingDaysOnEmployee.c.quarter <= max_quarter_last_year,
-                 ActualWorkingDaysOnEmployee.c.quarter >= min_quarter_last_year,
-                 ActualWorkingDaysOnEmployee.c.year == last_year))
+        or_(and_(ActualWorkingDaysOnEmployee.quarter <= max_quarter_this_year,
+                 ActualWorkingDaysOnEmployee.quarter >= min_quarter_this_year,
+                 ActualWorkingDaysOnEmployee.year == year),
+            and_(ActualWorkingDaysOnEmployee.quarter <= max_quarter_last_year,
+                 ActualWorkingDaysOnEmployee.quarter >= min_quarter_last_year,
+                 ActualWorkingDaysOnEmployee.year == last_year))
     ).distinct()
 
     result = await sessions.execute(query)
@@ -122,7 +122,7 @@ async def get_employees (quarter: int, id_choise_depart: int, year: int, session
 )
 async def get_metrics (quarter: int, sessions: AsyncSession = Depends(get_async_session)):
 
-    query = select(MetricsInQuartal).where(MetricsInQuartal.c.quartal == quarter)
+    query = select(MetricsInQuartal).where(MetricsInQuartal.quartal == quarter)
     result = await sessions.execute(query)
     list_metrics = result.one_or_none()
 
@@ -164,7 +164,7 @@ async def get_metrics (quarter: int, sessions: AsyncSession = Depends(get_async_
 )
 async def post_metrics (post_metrics: PostMetrics, sessions: AsyncSession = Depends(get_async_session)):
 
-    query = select(EmployeesToMetrics.c.id)
+    query = select(EmployeesToMetrics.id)
     result = await sessions.execute(query)
     list_res = result.all()
 

@@ -25,7 +25,7 @@ async def get_metrics(
     sessions: AsyncSession = Depends(get_async_session),
 ):
     # Основная логика обработки
-    query = select(MetricsInQuartal).where(MetricsInQuartal.c.quartal == quarter)
+    query = select(MetricsInQuartal).where(MetricsInQuartal.quartal == quarter)
     result = await sessions.execute(query)
     list_metrics = result.one_or_none()
 
@@ -35,11 +35,11 @@ async def get_metrics(
     metrics_id = list_metrics[3]
     durations = list_metrics[2]
 
-    query = select(EmployeesToMetrics.c.value).where(EmployeesToMetrics.c.quarter == quarter
+    query = select(EmployeesToMetrics.value).where(EmployeesToMetrics.quarter == quarter
                                                        ).where(
-                                                    EmployeesToMetrics.c.year == year
+                                                    EmployeesToMetrics.year == year
                                                     ).where(
-                                                    EmployeesToMetrics.c.employee_id == employee_id
+                                                    EmployeesToMetrics.employee_id == employee_id
                                                     )
     result = await sessions.execute(query)
     row_metrics_value = result.one_or_none()
@@ -63,7 +63,7 @@ async def get_metrics(
                 buf = ""
             metrics.append(str(metric[1]) + buf)
 
-    query = select(ActualWorkingDays).where(ActualWorkingDays.c.year == year).order_by(ActualWorkingDays.c.month)
+    query = select(ActualWorkingDays).where(ActualWorkingDays.year == year).order_by(ActualWorkingDays.month)
     result = await sessions.execute(query)
     request_actual_work = result.all()
 
@@ -76,8 +76,8 @@ async def get_metrics(
         result_actual_work_this_year[row[4]].append(row[3])
 #=======================================================================================================================
     last_year = year - 1
-    query = select(ActualWorkingDays).where(ActualWorkingDays.c.year == last_year).order_by(
-        ActualWorkingDays.c.month)
+    query = select(ActualWorkingDays).where(ActualWorkingDays.year == last_year).order_by(
+        ActualWorkingDays.month)
     result = await sessions.execute(query)
     request_actual_work = result.all()
 
@@ -93,13 +93,13 @@ async def get_metrics(
 
 #=======================================================================================================================
     query = select(ActualWorkingDaysOnEmployee).where(
-        ActualWorkingDaysOnEmployee.c.year == year
+        ActualWorkingDaysOnEmployee.year == year
                                                           ).where(
-        ActualWorkingDaysOnEmployee.c.department_id == department_id
+        ActualWorkingDaysOnEmployee.department_id == department_id
                                                                   ).where(
-        ActualWorkingDaysOnEmployee.c.employee_id == employee_id
+        ActualWorkingDaysOnEmployee.employee_id == employee_id
     ).order_by(
-        ActualWorkingDaysOnEmployee.c.month)
+        ActualWorkingDaysOnEmployee.month)
     result = await sessions.execute(query)
     request_actual_work_employee_this_year = result.all()
 
@@ -113,13 +113,13 @@ async def get_metrics(
         result_actual_work_employee_this_year[row[6]].append(buf)
 
     query = select(ActualWorkingDaysOnEmployee).where(
-        ActualWorkingDaysOnEmployee.c.year == last_year
+        ActualWorkingDaysOnEmployee.year == last_year
     ).where(
-        ActualWorkingDaysOnEmployee.c.department_id == department_id
+        ActualWorkingDaysOnEmployee.department_id == department_id
     ).where(
-        ActualWorkingDaysOnEmployee.c.employee_id == employee_id
+        ActualWorkingDaysOnEmployee.employee_id == employee_id
     ).order_by(
-        ActualWorkingDaysOnEmployee.c.month)
+        ActualWorkingDaysOnEmployee.month)
     result = await sessions.execute(query)
     request_actual_work_employee_last_year = result.all()
 
