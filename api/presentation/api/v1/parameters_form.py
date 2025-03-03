@@ -3,10 +3,10 @@ from sqlalchemy import select, insert, delete, update, or_, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 
-from api.infrastructure.storage.sqlalchemy.models.asos_models import (employees, roles, faculties_and_institutes,
-                                                                      metrics_in_quartal,
-                                                                      actual_working_days_on_employee,
-                                                                      actual_working_days, employees_to_metrics,
+from api.infrastructure.storage.sqlalchemy.models.asos_models import (Employee, Role, FacultyAndInstitute,
+                                                                      MetricsInQuartal,
+                                                                      ActualWorkingDaysOnEmployee,
+                                                                      ActualWorkingDays, EmployeesToMetrics,
                                                                       Department, MetricDescription)
 
 
@@ -46,7 +46,7 @@ async def get_department (sessions: AsyncSession = Depends(get_async_session)):
 )
 async def get_employees (quarter: int, id_choise_depart: int, year: int, sessions: AsyncSession = Depends(get_async_session)):
 
-    query = select(metrics_in_quartal).where(metrics_in_quartal.c.quartal == quarter)
+    query = select(MetricsInQuartal).where(MetricsInQuartal.c.quartal == quarter)
     result = await sessions.execute(query)
     list_metrics = result.one_or_none()
 
@@ -77,15 +77,15 @@ async def get_employees (quarter: int, id_choise_depart: int, year: int, session
             max_quarter_last_year = 4
             min_quarter_last_year = max(1, max_quarter_last_year - max_duration)
 
-    query = select(actual_working_days_on_employee.c.employee_id).where(
-        actual_working_days_on_employee.c.department_id == id_choise_depart
+    query = select(ActualWorkingDaysOnEmployee.c.employee_id).where(
+        ActualWorkingDaysOnEmployee.c.department_id == id_choise_depart
     ).where(
-        or_(and_(actual_working_days_on_employee.c.quarter <= max_quarter_this_year,
-                 actual_working_days_on_employee.c.quarter >= min_quarter_this_year,
-                 actual_working_days_on_employee.c.year == year),
-            and_(actual_working_days_on_employee.c.quarter <= max_quarter_last_year,
-                 actual_working_days_on_employee.c.quarter >= min_quarter_last_year,
-                 actual_working_days_on_employee.c.year == last_year))
+        or_(and_(ActualWorkingDaysOnEmployee.c.quarter <= max_quarter_this_year,
+                 ActualWorkingDaysOnEmployee.c.quarter >= min_quarter_this_year,
+                 ActualWorkingDaysOnEmployee.c.year == year),
+            and_(ActualWorkingDaysOnEmployee.c.quarter <= max_quarter_last_year,
+                 ActualWorkingDaysOnEmployee.c.quarter >= min_quarter_last_year,
+                 ActualWorkingDaysOnEmployee.c.year == last_year))
     ).distinct()
 
     result = await sessions.execute(query)
@@ -99,7 +99,7 @@ async def get_employees (quarter: int, id_choise_depart: int, year: int, session
     for emp in list_employees:
         list_id_employees.append(emp[0])
 
-    query = select(employees)
+    query = select(Employee)
     result = await sessions.execute(query)
     list_employees = result.all()
 
@@ -122,7 +122,7 @@ async def get_employees (quarter: int, id_choise_depart: int, year: int, session
 )
 async def get_metrics (quarter: int, sessions: AsyncSession = Depends(get_async_session)):
 
-    query = select(metrics_in_quartal).where(metrics_in_quartal.c.quartal == quarter)
+    query = select(MetricsInQuartal).where(MetricsInQuartal.c.quartal == quarter)
     result = await sessions.execute(query)
     list_metrics = result.one_or_none()
 
@@ -164,7 +164,7 @@ async def get_metrics (quarter: int, sessions: AsyncSession = Depends(get_async_
 )
 async def post_metrics (post_metrics: PostMetrics, sessions: AsyncSession = Depends(get_async_session)):
 
-    query = select(employees_to_metrics.c.id)
+    query = select(EmployeesToMetrics.c.id)
     result = await sessions.execute(query)
     list_res = result.all()
 
@@ -183,7 +183,7 @@ async def post_metrics (post_metrics: PostMetrics, sessions: AsyncSession = Depe
         "quarter": post_metrics.quarter,
         "employee_id": post_metrics.employee_id
     }
-    stmt = insert(employees_to_metrics).values(**data)
+    stmt = insert(EmployeesToMetrics).values(**data)
     await sessions.execute(stmt)
     await sessions.commit()
 

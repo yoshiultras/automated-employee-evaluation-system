@@ -7,52 +7,37 @@ from sqlalchemy.orm import declarative_base
 metadata = MetaData()
 Base = declarative_base()
 
-#TODO Переделать все модели в классы в соответствии с Departments
 
-# departments = Table(
-#
-#     "departments",
-#     metadata,
-#     Column("id", Integer, primary_key=True, autoincrement=True),
-#     Column("name_of_department", String, nullable=False),
-#     Column("affiliation", Integer,ForeignKey("faculties_and_institutes.id"), nullable=False),
-#
-# )
+class Employee(Base):
+    __tablename__ = 'employees'
+    
+    employee_id = Column(Integer, primary_key=True, autoincrement=True)
+    first_name = Column(String, nullable=False)
+    last_name = Column(String, nullable=False)
+    surname = Column(String, nullable=False)
+    mail_box = Column(Boolean, default=False, nullable=False)
+    number_phone = Column(String, nullable=False)
+    role_id = Column(Integer, ForeignKey("roles.role_id"), nullable=False)
+
+
+class Role(Base):
+    __tablename__ = 'roles'
+    
+    role_id = Column(Integer, primary_key=True, autoincrement=True)
+    role = Column(String, nullable=False)
+
+
+class FacultyAndInstitute(Base):
+    __tablename__ = 'faculties_and_institutes'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String, nullable=False)
+
 class Department(Base):
     __tablename__ = 'departments'
     id = Column(Integer, primary_key=True, autoincrement=True)
     name_of_department = Column(String, nullable=False)
     affiliation = Column(Integer, ForeignKey("faculties_and_institutes.id"), nullable=False)
-employees = Table(
-
-    "employees",
-    metadata,
-    Column("employee_id", Integer, primary_key=True, autoincrement=True),
-    Column("first_name", String, nullable=False),
-    Column("last_name", String, nullable=False),
-    Column("surname", String, nullable=False),
-    Column("mail_box", Boolean, default=False, nullable=False),
-    Column("number_phone", String, nullable=False),
-    Column("role_id", Integer,ForeignKey("roles.id"), nullable=False),
-)
-
-roles = Table(
-
-    "roles",
-    metadata,
-    Column("role_id", Integer, primary_key=True, autoincrement=True),
-    Column("role", String, nullable=False),
-
-)
-
-faculties_and_institutes = Table(
-
-    "faculties_and_institutes",
-    metadata,
-    Column("id", Integer, primary_key=True, autoincrement=True),
-    Column("name", String, nullable=False),
-
-)
 
 class MetricDescription(Base):
     __tablename__ = 'metric_descriptions'
@@ -90,50 +75,45 @@ class Section(Base):
         fields_order = ['id', 'description']
         return [getattr(self, field) for field in fields_order]
 
-metrics_in_quartal = Table(
 
-    "metrics_in_quartal",
-    metadata,
-    Column("id", Integer, primary_key=True, autoincrement=True),
-    Column("quartal", Integer, nullable=False),
-    Column("duration", ARRAY(Integer), nullable=False),
-    Column("metrics_id", ARRAY(Integer), nullable=False),
-
-)
-
-actual_working_days_on_employee = Table(
-
-    "actual_working_days_on_employee",
-    metadata,
-    Column("id", Integer, primary_key=True, autoincrement=True),
-    Column("employee_id", Integer,ForeignKey("employees.employee_id"), nullable=False),
-    Column("jobtitle", String, nullable=False),
-    Column("year", Integer, nullable=False),
-    Column("month", Integer, nullable=False),
-    Column("count_day", Integer, nullable=False),
-    Column("quarter", Integer, nullable=False),
-    Column("department_id", Integer,ForeignKey("departments.id"), nullable=False),
+class MetricsInQuartal(Base):
+    __tablename__ = 'metrics_in_quartal'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    quartal = Column(Integer, nullable=False)
+    duration = Column(ARRAY(Integer), nullable=False)
+    metrics_id = Column(ARRAY(Integer), nullable=False)
 
 
-)
+class ActualWorkingDaysOnEmployee(Base):
+    __tablename__ = 'actual_working_days_on_employee'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    employee_id = Column(Integer, ForeignKey("employees.employee_id"), nullable=False)
+    jobtitle = Column(String, nullable=False)
+    year = Column(Integer, nullable=False)
+    month = Column(Integer, nullable=False)
+    count_day = Column(Integer, nullable=False)
+    quarter = Column(Integer, nullable=False)
+    department_id = Column(Integer, ForeignKey("departments.id"), nullable=False)
 
-actual_working_days = Table(
-    "actual_working_days",
-    metadata,
-    Column("id", Integer, primary_key=True, autoincrement=True),
-    Column("year", Integer, nullable=False),
-    Column("month", Integer, nullable=False),
-    Column("count_day", Integer, nullable=False),
-    Column("quarter", Integer, nullable=False),
-)
 
-employees_to_metrics = Table(
-    "employees_to_metrics",
-    metadata,
-    Column("id", Integer, primary_key=True, autoincrement=True),
-    Column("metrics_id", ARRAY(Integer), nullable=False),
-    Column("value", ARRAY(Integer), nullable=False),
-    Column("year", Integer, nullable=False),
-    Column("quarter", Integer, nullable=False),
-    Column("employee_id", Integer,ForeignKey("employees.employee_id"), nullable=False),
-)
+class ActualWorkingDays(Base):
+    __tablename__ = 'actual_working_days'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    year = Column(Integer, nullable=False)
+    month = Column(Integer, nullable=False)
+    count_day = Column(Integer, nullable=False)
+    quarter = Column(Integer, nullable=False)
+
+
+class EmployeesToMetrics(Base):
+    __tablename__ = 'employees_to_metrics'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    metrics_id = Column(ARRAY(Integer), nullable=False)
+    value = Column(ARRAY(Integer), nullable=False)
+    year = Column(Integer, nullable=False)
+    quarter = Column(Integer, nullable=False)
+    employee_id = Column(Integer, ForeignKey("employees.employee_id"), nullable=False)
