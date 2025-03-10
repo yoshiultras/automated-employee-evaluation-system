@@ -11,6 +11,9 @@ Base = declarative_base()
 class Employee(Base):
     __tablename__ = 'employees'
     
+
+    login = Column(String)
+    password = Column(String)
     employee_id = Column(Integer, primary_key=True, autoincrement=True)
     first_name = Column(String, nullable=False)
     last_name = Column(String, nullable=False)
