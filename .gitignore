@@ -86,3 +86,4 @@ dmypy.json
 logs/*
 
 *.xlsx
+.idea

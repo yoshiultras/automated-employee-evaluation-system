@@ -47,7 +47,7 @@ class MetricDescription(Base):
 
     metric_id = Column(Integer, primary_key=True)
     metric_number = Column(Integer)
-    metric_subnumber = Column(Integer)
+    metric_subnumber = Column(String)
     description = Column(String)
     unit_of_measurement = Column(String)
     base_level = Column(Integer)
