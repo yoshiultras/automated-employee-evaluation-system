@@ -1,6 +1,6 @@
 from fastapi import HTTPException, Depends, APIRouter
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -43,17 +43,17 @@ class SectionResponse(SectionBase):
         }
 
 class MetricDescriptionBase(BaseModel):
-    metric_number: int
-    metric_subnumber: str
-    description: str
-    unit_of_measurement: str
-    base_level: str
-    average_level: str
-    goal_level: str
-    measurement_frequency: str
-    conditions: str
-    notes: str
-    points: int
+    metric_number: Optional[int]
+    metric_subnumber: Optional[str]
+    description: Optional[str]
+    unit_of_measurement: Optional[str] = None
+    base_level: Optional[str] = None
+    average_level: Optional[str] = None
+    goal_level: Optional[str] = None
+    measurement_frequency: Optional[str] = None
+    conditions: Optional[str] = None
+    notes: Optional[str] = None
+    points: Optional[int] = None
     section_id: int
     model_config = {
         "from_attributes": "true",
@@ -210,7 +210,13 @@ async def read_metrics(
     result = await session.execute(
         select(MetricDescription).offset(skip).limit(limit)
     )
-    return result.scalars().all()
+    metrics = result.scalars().all()
+
+    # Проверка данных (опционально, для отладки)
+    for metric in metrics:
+        print(metric.to_dict())  # Если у вас есть метод to_dict в модели
+
+    return metrics
 
 
 @router.get(

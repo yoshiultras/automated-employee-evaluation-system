@@ -50,9 +50,9 @@ class MetricDescription(Base):
     metric_subnumber = Column(String)
     description = Column(String)
     unit_of_measurement = Column(String)
-    base_level = Column(Integer)
-    average_level = Column(Integer)
-    goal_level = Column(Integer)
+    base_level = Column(String)
+    average_level = Column(String)
+    goal_level = Column(String)
     measurement_frequency = Column(String)
     conditions = Column(String)
     notes = Column(String)
@@ -67,6 +67,22 @@ class MetricDescription(Base):
             'notes', 'points', 'section_id'
         ]
         return [getattr(self, field) for field in fields_order]
+    def to_dict(self):
+        return {
+            "metric_id": self.metric_id,
+            "metric_number": self.metric_number,
+            "metric_subnumber": self.metric_subnumber,
+            "description": self.description,
+            "unit_of_measurement": self.unit_of_measurement,
+            "base_level": self.base_level,
+            "average_level": self.average_level,
+            "goal_level": self.goal_level,
+            "measurement_frequency": self.measurement_frequency,
+            "conditions": self.conditions,
+            "notes": self.notes,
+            "points": self.points,
+            "section_id": self.section_id,
+        }
 
 class Section(Base):
     __tablename__ = 'sections'

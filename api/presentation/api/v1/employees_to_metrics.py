@@ -12,7 +12,7 @@ from api.infrastructure.storage.sqlalchemy.session_maker import get_async_sessio
 # Pydantic схемы
 class EmployeesToMetricsBase(BaseModel):
     metrics_id: List[int] = Field(..., description="Список ID метрик")
-    value: List[int] = Field(..., description="Список значений для метрик")
+    value: Optional[List[int]] = Field(..., description="Список значений для метрик")
     year: int = Field(..., description="Год")
     quarter: int = Field(..., description="Квартал (1-4)")
     employee_id: int = Field(..., description="ID сотрудника")
