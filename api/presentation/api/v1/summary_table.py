@@ -1,191 +1,207 @@
-from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, Query, HTTPException, status
+from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
-from starlette import status
+from typing import Dict, List
 
-from api.infrastructure.storage.sqlalchemy.models.asos_models import (Employee, Role, FacultyAndInstitute,
-                                                                      Department, MetricDescription, Section,
-                                                                      MetricsInQuartal,
-                                                                      ActualWorkingDaysOnEmployee,
-                                                                      ActualWorkingDays, EmployeesToMetrics)
-
+from api.infrastructure.storage.sqlalchemy.models.asos_models import (
+    MetricsInQuartal,
+    ActualWorkingDays,
+    ActualWorkingDaysOnEmployee,
+    EmployeesToMetrics,
+    MetricDescription
+)
 from api.infrastructure.storage.sqlalchemy.session_maker import get_async_session
 
 router = APIRouter()
 
-@router.get(
-    path="/metrics",
-    status_code=status.HTTP_200_OK,
-)
-async def get_metrics(
-    quarter: int = Query(..., description="Квартал"),
-    year: int = Query(..., description="Год"),
-    employee_id: int = Query(..., description="ID сотрудника"),
-    department_id: int = Query(..., description="ID отдела"),
-    sessions: AsyncSession = Depends(get_async_session),
+
+async def get_metrics_in_quarter(
+        session: AsyncSession,
+        quarter: int
+) -> MetricsInQuartal:
+    """Get metrics configuration for specified quarter and year"""
+    result = await session.execute(
+        select(MetricsInQuartal).where(
+            and_(
+                MetricsInQuartal.quartal == quarter
+            )
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+async def get_employee_metrics_values(
+        session: AsyncSession,
+        employee_id: int,
+        quarter: int,
+        year: int
+) -> List[int]:
+    """Get employee's metrics values for specified quarter"""
+    result = await session.execute(
+        select(EmployeesToMetrics.value).where(
+            and_(
+                EmployeesToMetrics.employee_id == employee_id,
+                EmployeesToMetrics.quarter == quarter,
+                EmployeesToMetrics.year == year
+            )
+        )
+    )
+    row = result.scalar_one_or_none()
+    return row if row else [0]
+
+
+async def get_work_days_data(
+        session: AsyncSession,
+        year: int
+) -> Dict[int, List[int]]:
+    """Get actual working days data for year by quarters"""
+    result = await session.execute(
+        select(ActualWorkingDays).where(
+            ActualWorkingDays.year == year
+        ).order_by(ActualWorkingDays.month)
+    )
+    quarters_data = {1: [], 2: [], 3: [], 4: []}
+    for record in result.scalars():
+        quarters_data[record.quarter].append(record.count_day)
+    return quarters_data
+
+
+async def get_employee_work_days(
+        session: AsyncSession,
+        employee_id: int,
+        department_id: int,
+        year: int
+) -> Dict[int, List[Dict]]:
+    """Get employee's working days data by quarters"""
+    result = await session.execute(
+        select(ActualWorkingDaysOnEmployee).where(
+            and_(
+                ActualWorkingDaysOnEmployee.employee_id == employee_id,
+                ActualWorkingDaysOnEmployee.department_id == department_id,
+                ActualWorkingDaysOnEmployee.year == year
+            )
+        ).order_by(ActualWorkingDaysOnEmployee.month)
+    )
+    quarters_data = {1: [], 2: [], 3: [], 4: []}
+    for record in result.scalars():
+        quarters_data[record.quarter].append({
+            "days": record.count_day,
+            "jobtitle": record.jobtitle
+        })
+    return quarters_data
+
+
+async def calculate_work_coefficients(
+        durations: List[int],
+        work_days: Dict[int, Dict[int, List[int]]],
+        employee_days: Dict[int, Dict[int, List[Dict]]],
+        target_year: int,
+        target_quarter: int
+) -> tuple:
+    """Calculate work coefficients for metrics"""
+    coefficients = []
+    total_work_days = []
+    employee_total_days = []
+
+    for duration in durations:
+        # Определяем год и квартал для расчета
+        quarter = target_quarter
+        year = target_year
+
+        # Если duration выходит за пределы текущего года, корректируем год и квартал
+        if duration > 4:
+            year -= 1
+            quarter = 4 - (duration - 4)
+
+        # Проверяем, есть ли данные для этого года и квартала
+        if year not in work_days or quarter not in work_days[year]:
+            coefficients.append(0)
+            total_work_days.append(0)
+            employee_total_days.append(0)
+            continue
+
+        # Суммируем рабочие дни
+        work_days_sum = sum(work_days[year][quarter])
+
+        # Суммируем дни сотрудника с учетом коэффициента для должности
+        employee_days_sum = 0
+        for day_data in employee_days.get(year, {}).get(quarter, []):
+            korr = 0.5 if day_data["jobtitle"] in ["ИО", "ВРИО"] else 1
+            employee_days_sum += day_data["days"] * korr
+
+        # Рассчитываем коэффициент
+        coefficient = round(employee_days_sum / work_days_sum, 2) if work_days_sum else 0
+
+        coefficients.append(coefficient)
+        total_work_days.append(work_days_sum)
+        employee_total_days.append(employee_days_sum)
+
+    return total_work_days, employee_total_days, coefficients
+
+
+@router.get("/metrics", status_code=status.HTTP_200_OK)
+async def get_metrics_summary(
+        quarter: int = Query(..., description="Квартал"),
+        year: int = Query(..., description="Год"),
+        employee_id: int = Query(..., description="ID сотрудника"),
+        department_id: int = Query(..., description="ID отдела"),
+        session: AsyncSession = Depends(get_async_session),
 ):
-    # Основная логика обработки
-    query = select(MetricsInQuartal).where(MetricsInQuartal.quartal == quarter)
-    result = await sessions.execute(query)
-    list_metrics = result.one_or_none()
 
-    if list_metrics is None:
-        return {"status": "Empty metrics"}
+    # Получаем базовые данные
+    metrics_config = await get_metrics_in_quarter(session, quarter)
+    if not metrics_config:
+        return {"status": "Empty metrics configuration"}
 
-    metrics_id = list_metrics[3]
-    durations = list_metrics[2]
+    # Получаем значения метрик сотрудника
+    metrics_values = await get_employee_metrics_values(
+        session, employee_id, quarter, year
+    )
 
-    query = select(EmployeesToMetrics.value).where(EmployeesToMetrics.quarter == quarter
-                                                       ).where(
-                                                    EmployeesToMetrics.year == year
-                                                    ).where(
-                                                    EmployeesToMetrics.employee_id == employee_id
-                                                    )
-    result = await sessions.execute(query)
-    row_metrics_value = result.one_or_none()
-    list_metrics_value = list()
+    # Получаем данные по рабочим дням
+    current_year_work_days = await get_work_days_data(session, year)
+    last_year_work_days = await get_work_days_data(session, year - 1)
 
-    if row_metrics_value is None:
-        list_metrics_value = [0] * len(durations)
-    else:
-        list_metrics_value = row_metrics_value[0]
+    # Получаем данные сотрудника
+    current_year_employee_days = await get_employee_work_days(
+        session, employee_id, department_id, year
+    )
+    last_year_employee_days = await get_employee_work_days(
+        session, employee_id, department_id, year - 1
+    )
 
-    query = select(MetricDescription)
-    result = await sessions.execute(query)
-    list_metrics = result.all()
+    # Рассчитываем коэффициенты
+    work_days, employee_days, coefficients = await calculate_work_coefficients(
+        metrics_config.duration,
+        {year: current_year_work_days, year - 1: last_year_work_days},
+        {year: current_year_employee_days, year - 1: last_year_employee_days},
+        year,  # Передаем целевой год
+        quarter  # Передаем целевой квартал
+    )
 
-    metrics = list()
+    # Формируем список метрик
+    result = await session.execute(select(MetricDescription))
+    metrics = [
+        f"{m.metric_number}{m.metric_subnumber or ''}"
+        for m in result.scalars()
+        if m.metric_id in metrics_config.metrics_id
+    ]
 
-    for metric in list_metrics:
-        if metric[0] in metrics_id:
-            buf = str(metric[2])
-            if buf == "None":
-                buf = ""
-            metrics.append(str(metric[1]) + buf)
+    # Рассчитываем значения с коэффициентами
+    adjusted_values = [
+        round(value * coeff, 2)
+        for value, coeff in zip(metrics_values, coefficients)
+    ]
 
-    query = select(ActualWorkingDays).where(ActualWorkingDays.year == year).order_by(ActualWorkingDays.month)
-    result = await sessions.execute(query)
-    request_actual_work = result.all()
-
-    if request_actual_work is None:
-        return {"status": "Empty work day"}
-
-    result_actual_work_this_year = {1: list(), 2: list(), 3: list(), 4: list()}
-
-    for row in request_actual_work:
-        result_actual_work_this_year[row[4]].append(row[3])
-#=======================================================================================================================
-    last_year = year - 1
-    query = select(ActualWorkingDays).where(ActualWorkingDays.year == last_year).order_by(
-        ActualWorkingDays.month)
-    result = await sessions.execute(query)
-    request_actual_work = result.all()
-
-    if request_actual_work is None:
-        return {"status": "Empty work day"}
-
-    result_actual_work_last_year = {1: list(), 2: list(), 3: list(), 4: list()}
-
-    for row in request_actual_work:
-        result_actual_work_last_year[row[4]].append(row[3])
-
-    result_actual_work = {last_year: result_actual_work_last_year, year: result_actual_work_this_year}
-
-#=======================================================================================================================
-    query = select(ActualWorkingDaysOnEmployee).where(
-        ActualWorkingDaysOnEmployee.year == year
-                                                          ).where(
-        ActualWorkingDaysOnEmployee.department_id == department_id
-                                                                  ).where(
-        ActualWorkingDaysOnEmployee.employee_id == employee_id
-    ).order_by(
-        ActualWorkingDaysOnEmployee.month)
-    result = await sessions.execute(query)
-    request_actual_work_employee_this_year = result.all()
-
-    result_actual_work_employee_this_year = {1: list(), 2: list(), 3: list(), 4: list()}
-
-    for row in request_actual_work_employee_this_year:
-        buf = {
-            "days": row[5],
-            "jobtitle": row[2]
+    return {
+        "status": "OK",
+        "data": {
+            "duration": metrics_config.duration,
+            "metrics": metrics,
+            "work_day": work_days,
+            "employee_day": employee_days,
+            "koff": coefficients,
+            "metrics_value": metrics_values,
+            "metrics_value_koff": adjusted_values,
         }
-        result_actual_work_employee_this_year[row[6]].append(buf)
-
-    query = select(ActualWorkingDaysOnEmployee).where(
-        ActualWorkingDaysOnEmployee.year == last_year
-    ).where(
-        ActualWorkingDaysOnEmployee.department_id == department_id
-    ).where(
-        ActualWorkingDaysOnEmployee.employee_id == employee_id
-    ).order_by(
-        ActualWorkingDaysOnEmployee.month)
-    result = await sessions.execute(query)
-    request_actual_work_employee_last_year = result.all()
-
-    result_actual_work_employee_last_year = {1: list(), 2: list(), 3: list(), 4: list()}
-
-    for row in request_actual_work_employee_last_year:
-        buf = {
-            "days": row[5],
-            "jobtitle": row[2]
-        }
-        result_actual_work_employee_last_year[row[6]].append(buf)
-
-    result_actual_work_employee = {last_year: result_actual_work_employee_last_year, year: result_actual_work_employee_this_year}
-
-    response_actual_work = list()
-    response_actual_work_employee = list()
-    response_koff = list()
-
-    for i in range(len(durations)):
-        actual_quarter = quarter - 1
-        actual_year = year
-
-        employee_work = 0.0
-        employeee_day = 0
-        work_day = 0
-
-        for j in range(durations[i]):
-            if actual_quarter < 1:
-                actual_quarter = 4
-                actual_year -= 1
-
-            work_day += sum(result_actual_work[actual_year][actual_quarter])
-
-            if len(result_actual_work_employee[actual_year][actual_quarter]) == 0:
-                actual_quarter -= 1
-                continue
-
-            quartes_employee = result_actual_work_employee[actual_year][actual_quarter]
-
-            for quarter_employee in quartes_employee:
-                korr = 1
-                if quarter_employee["jobtitle"] == "ИО" or quarter_employee["jobtitle"] == "ВРИО":
-                    korr = 0.5
-                employee_work += (quarter_employee["days"] * korr)
-                employeee_day += quarter_employee["days"]
-
-            actual_quarter -= 1
-
-        koff = round(employee_work / work_day, 2)
-
-        response_actual_work.append(work_day)
-        response_actual_work_employee.append(employeee_day)
-        response_koff.append(koff)
-
-    list_metrics_value_buf_koff = list()
-    for i in range(len(list_metrics_value)):
-        list_metrics_value_buf_koff.append(round(list_metrics_value[i] * response_koff[i], 2))
-
-    response_data = {
-        "duration": durations,
-        "metrics": metrics,
-        "work_day": response_actual_work,
-        "employee_day": response_actual_work_employee,
-        "koff": response_koff,
-        "metrics_value": list_metrics_value,
-        "metrics_value_koff": list_metrics_value_buf_koff,
     }
-
-    return {"status": "OK", "data": response_data}

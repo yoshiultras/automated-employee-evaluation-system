@@ -11,14 +11,14 @@ Base = declarative_base()
 class Employee(Base):
     __tablename__ = 'employees'
     
-
-    login = Column(String)
-    password = Column(String)
+    # TODO когда перейдем к новой схеме БД - раскоментить
+    # login = Column(String)
+    # password = Column(String)
     employee_id = Column(Integer, primary_key=True, autoincrement=True)
     first_name = Column(String, nullable=False)
     last_name = Column(String, nullable=False)
     surname = Column(String, nullable=False)
-    mail_box = Column(Boolean, default=False, nullable=False)
+    mail_box = Column(String, default=False, nullable=False)
     number_phone = Column(String, nullable=False)
     role_id = Column(Integer, ForeignKey("roles.role_id"), nullable=False)
 
