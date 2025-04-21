@@ -9,7 +9,7 @@ from api.config import Settings
 from api.presentation.api.v1.dto import HTTPException
 
 logger = logging.getLogger(__name__)
-origins = []
+origins = ["*"]
 
 
 async def error_header(
