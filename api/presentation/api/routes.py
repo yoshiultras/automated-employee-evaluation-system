@@ -17,3 +17,4 @@ router.include_router(faculty_and_department.router, prefix="/faculty_and_depart
 router.include_router(employees_to_metrics.router, tags=["employees_to_metrics"])
 router.include_router(employees.router, tags=["employees"])
 router.include_router(kpi.router, prefix="/kpi", tags=["table"])
+router.include_router(auth_polytech.router, tags=["auth_polytech"])
