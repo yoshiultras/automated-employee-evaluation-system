@@ -2,7 +2,7 @@ from fastapi import APIRouter
 
 from api.config import Settings
 from api.presentation.api.v1 import employees_to_metrics, table_maker, parameters_form, summary_table, templates_router, \
-    auth, metrics, faculty_and_department, employees, kpi
+    auth, metrics, faculty_and_department, employees, kpi, auth_polytech
 
 settings = Settings()
 
