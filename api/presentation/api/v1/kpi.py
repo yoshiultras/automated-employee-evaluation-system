@@ -1,9 +1,11 @@
 from http.client import HTTPException
-from sqlalchemy import select
+from sqlalchemy import select, any_, func, literal_column, true, and_
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 from starlette import status
 
-from api.infrastructure.storage.sqlalchemy.models.asos_models import Department, DepartmentsMetrics, Employee, MetricDescription
+from api.infrastructure.storage.sqlalchemy.models.asos_models import Department, DepartmentsMetrics, Employee, \
+    MetricDescription, EmployeesToMetrics
 from api.infrastructure.storage.sqlalchemy.session_maker import get_async_session
 from fastapi import APIRouter, Body, Response, Depends, Query
 from fastapi.responses import FileResponse
@@ -24,74 +26,80 @@ async def get_kpi_table(
     quarter: int | None = None,
     session: AsyncSession = Depends(get_async_session),
 ):
-    try:
-        # Основной запрос с JOIN всех необходимых таблиц
-        query = select(
-            DepartmentsMetrics.value.label("score"),
-            DepartmentsMetrics.year,
-            DepartmentsMetrics.quarter,
-            Department,
-            MetricDescription,
-            Employee  # Добавляем информацию о работнике
-        ).select_from(DepartmentsMetrics)\
-         .join(
-            MetricDescription,
-            DepartmentsMetrics.metrics_id == MetricDescription.metric_id
-         ).join(
-            Department,
-            DepartmentsMetrics.department_id == Department.id
-         ).join(
-            Employee,
-            DepartmentsMetrics.author_id == Employee.employee_id
-         ).where(
-            Employee.employee_id == employee_id  # Фильтр по ID работника
-         )
-        
-        # Дополнительная фильтрация по году и кварталу
-        if year is not None:
-            query = query.where(DepartmentsMetrics.year == year)
-        if quarter is not None:
-            query = query.where(DepartmentsMetrics.quarter == quarter)
-        
-        result = await session.execute(query)
-        
-        # Формируем полный ответ
-        response_data = []
-        for row in result:
-            department_data = {
-                'id': row.Department.id,
-                'name': row.Department.name_of_department,
-                'affiliation': row.Department.affiliation,
-                'faculty_id': row.Department.id_facultet
-            }
-            
-            metric_data = {
-                'id': row.MetricDescription.metric_id,
-                'number': row.MetricDescription.metric_number,
-                'subnumber': row.MetricDescription.metric_subnumber,
-                'description': row.MetricDescription.description,
-                'points': row.MetricDescription.points
-            }
-            
-            
-            response_data.append({
-                'department': department_data,
-                'metric': metric_data,
-                'score': row.score
-            })
-        
-        return {
-            "status": "OK",
-            "year": year,
-            "quarter": quarter,
-            "data": response_data
+    unnested = aliased(
+        select(
+            EmployeesToMetrics.employee_id.label("employee_id"),
+            EmployeesToMetrics.year,
+            EmployeesToMetrics.quarter,
+            func.unnest(EmployeesToMetrics.metrics_id).label("metric_id")
+        )
+            .where(EmployeesToMetrics.employee_id == employee_id)
+            .alias("unnested_metrics")
+    )
+
+    # Шаг 2 — LEFT JOIN с departments_metrics по metric_id и author_id
+    query = select(
+        MetricDescription,
+        DepartmentsMetrics.value.label("score"),
+        DepartmentsMetrics.year.label("dm_year"),
+        DepartmentsMetrics.quarter.label("dm_quarter"),
+        Department
+    ).select_from(unnested) \
+        .join(
+        MetricDescription,
+        MetricDescription.metric_id == unnested.c.metric_id
+    ) \
+        .outerjoin(
+        DepartmentsMetrics,
+        and_(
+            DepartmentsMetrics.metrics_id == unnested.c.metric_id,
+            DepartmentsMetrics.author_id == unnested.c.employee_id
+        )
+    ) \
+        .outerjoin(
+        Department,
+        DepartmentsMetrics.department_id == Department.id
+    )
+
+    # Дополнительная фильтрация по году и кварталу
+    if year is not None:
+        query = query.where(DepartmentsMetrics.year == year)
+    if quarter is not None:
+        query = query.where(DepartmentsMetrics.quarter == quarter)
+
+    result = await session.execute(query)
+
+    # Формируем полный ответ
+    response_data = []
+    for row in result:
+        department_data = {
+            'id': row.Department.id if row.Department is not None else 0,
+            'name': row.Department.id if row.Department is not None else 0,
+            'affiliation': row.Department.id if row.Department is not None else 0,
+            'faculty_id': row.Department.id if row.Department is not None else 0,
         }
-        
-    except Exception as e:
-        return {
-            "status": "error",
-            "message": str(e)
+
+        metric_data = {
+            'id': row.MetricDescription.metric_id,
+            'number': row.MetricDescription.metric_number,
+            'subnumber': row.MetricDescription.metric_subnumber,
+            'description': row.MetricDescription.description,
+            'points': row.MetricDescription.points
         }
+
+
+        response_data.append({
+            'department': department_data,
+            'metric': metric_data,
+            'score': row.score
+        })
+
+    return {
+        "status": "OK",
+        "year": year,
+        "quarter": quarter,
+        "data": response_data
+    }
     
 
 @router.post(

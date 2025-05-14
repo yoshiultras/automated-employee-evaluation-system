@@ -208,7 +208,7 @@ async def read_metrics(
         session: AsyncSession = Depends(get_async_session)
 ):
     result = await session.execute(
-        select(MetricDescription).offset(skip).limit(limit)
+        select(MetricDescription).where(MetricDescription.description != "исключен").offset(skip).limit(limit)
     )
     metrics = result.scalars().all()
 
