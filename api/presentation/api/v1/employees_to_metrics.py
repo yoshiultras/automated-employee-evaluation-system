@@ -1,8 +1,10 @@
+from datetime import date, datetime
+
 from fastapi import HTTPException, Depends, APIRouter
 from pydantic import BaseModel, Field
 from typing import List, Optional
 
-from sqlalchemy import select
+from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 
@@ -12,7 +14,8 @@ from api.infrastructure.storage.sqlalchemy.session_maker import get_async_sessio
 # Pydantic схемы
 class EmployeesToMetricsBase(BaseModel):
     metrics_id: List[int] = Field(..., description="Список ID метрик")
-    value: Optional[List[int]] = Field(..., description="Список значений для метрик")
+    date_start: datetime = Field(..., description="Список значений для метрик")
+    date_end: datetime = Field(..., description="Список значений для метрик")
     year: int = Field(..., description="Год")
     quarter: int = Field(..., description="Квартал (1-4)")
     employee_id: int = Field(..., description="ID сотрудника")
@@ -23,9 +26,10 @@ class EmployeesToMetricsBase(BaseModel):
             "examples": [
                 {
                     "metrics_id": [1, 2, 3],
-                    "value": [10, 20, 30],
                     "year": 2023,
                     "quarter": 1,
+                    "date_start": 0,
+                    "date_end": 0,
                     "employee_id": 1
                 }
             ]
@@ -47,9 +51,10 @@ class EmployeesToMetricsResponse(EmployeesToMetricsBase):
                     {
                         "id": 1,
                         "metrics_id": [1, 2, 3],
-                        "value": [10, 20, 30],
                         "year": 2023,
                         "quarter": 1,
+                        "date_start": 0,
+                        "date_end": 0,
                         "employee_id": 1
                     }
                 ]
@@ -101,6 +106,11 @@ async def create_employee_to_metric(
         session: AsyncSession = Depends(get_async_session)
 ):
     db_record = EmployeesToMetrics(**record.dict())
+    result = await session.execute(
+        select(EmployeesToMetrics).order_by(desc(EmployeesToMetrics.id)).limit(1)
+    )
+    id_gen = result.scalar_one_or_none()
+    db_record.id = id_gen.id + 1
     session.add(db_record)
     await session.commit()
     await session.refresh(db_record)
