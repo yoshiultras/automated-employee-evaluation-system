@@ -1,8 +1,8 @@
 from fastapi import HTTPException, Depends, APIRouter
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import Dict, List, Optional
 
-from sqlalchemy import select
+from sqlalchemy import nulls_last, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 
@@ -82,7 +82,7 @@ class MetricDescriptionCreate(MetricDescriptionBase):
 
 class MetricDescriptionResponse(MetricDescriptionBase):
     metric_id: int
-
+    section: Optional[Dict[str, str]] 
     class Config:
         orm_mode = True
         model_config = {
@@ -98,6 +98,8 @@ class MetricDescriptionResponse(MetricDescriptionBase):
 
 
 router = APIRouter()
+
+
 
 # Section Endpoints
 @router.get(
@@ -207,16 +209,38 @@ async def read_metrics(
         limit: int = 100,
         session: AsyncSession = Depends(get_async_session)
 ):
-    result = await session.execute(
-        select(MetricDescription).offset(skip).limit(limit)
-    )
-    metrics = result.scalars().all()
-
-    # Проверка данных (опционально, для отладки)
-    for metric in metrics:
-        print(metric.to_dict())  # Если у вас есть метод to_dict в модели
-
-    return metrics
+    try:
+        # Получаем метрики вместе с секциями
+        stmt = (
+            select(MetricDescription, Section.description.label("section_description"))
+            .join(Section, MetricDescription.section_id == Section.id)
+            .order_by(
+                MetricDescription.section_id.asc(),
+                MetricDescription.metric_number.asc(),
+                MetricDescription.metric_subnumber.asc()
+            )
+            .offset(skip)
+            .limit(limit)
+        )
+        
+        result = await session.execute(stmt)
+        
+        # Формируем ответ с включением информации о секции
+        metrics = []
+        for metric, section_desc in result:
+            metric_dict = metric.__dict__
+            # Удаляем внутренние атрибуты SQLAlchemy
+            metric_dict.pop('_sa_instance_state', None)
+            # Добавляем информацию о секции
+            metric_dict["section"] = {"description": section_desc}
+            metrics.append(metric_dict)
+            
+        return metrics
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Ошибка при получении метрик: {str(e)}"
+        )
 
 
 @router.get(
