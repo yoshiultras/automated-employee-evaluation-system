@@ -2,7 +2,7 @@ from fastapi import APIRouter
 
 from api.config import Settings
 from api.presentation.api.v1 import employees_to_metrics, table_maker, parameters_form, summary_table, templates_router, \
-    auth, metrics, faculty_and_department, employees, kpi, auth_polytech
+    auth, metrics, faculty_and_department, employees, kpi, auth_polytech, employees_to_department
 
 settings = Settings()
 
@@ -18,3 +18,4 @@ router.include_router(employees_to_metrics.router, tags=["employees_to_metrics"]
 router.include_router(employees.router, tags=["employees"])
 router.include_router(kpi.router, prefix="/kpi", tags=["table"])
 router.include_router(auth_polytech.router, tags=["auth_polytech"])
+router.include_router(employees_to_department.router, tags=["employees_to_department"])
