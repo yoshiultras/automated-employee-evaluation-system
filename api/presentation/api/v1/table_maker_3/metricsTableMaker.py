@@ -54,7 +54,6 @@ class TableMaker3:
         sheet = wb['Метрики']
         ws = wb.active
 
-        print(metrics[0].to_array(), sections[0].to_array())
         current_row = 5
         current_category = 0
         counter = 0
