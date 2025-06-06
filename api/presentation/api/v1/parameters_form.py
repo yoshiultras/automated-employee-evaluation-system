@@ -131,7 +131,7 @@ async def get_metrics (quarter: int, sessions: AsyncSession = Depends(get_async_
     metrics_id = list_metrics[0].metrics_id
     durations = list_metrics[0].duration
 
-    query = select(MetricDescription)
+    query = select(MetricDescription).where(MetricDescription.is_active == True)
     result = await sessions.execute(query)
     list_metrics = result.scalars().all()
 

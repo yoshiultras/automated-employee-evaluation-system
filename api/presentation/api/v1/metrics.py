@@ -2,12 +2,14 @@ from fastapi import HTTPException, Depends, APIRouter
 from pydantic import BaseModel
 from typing import Dict, List, Optional
 
-from sqlalchemy import nulls_last, select
+from sqlalchemy import nulls_last, update, insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 
 from api.infrastructure.storage.sqlalchemy.models.asos_models import Section, MetricDescription
 from api.infrastructure.storage.sqlalchemy.session_maker import get_async_session
+
+from datetime import date
 
 # Pydantic схемы
 class SectionBase(BaseModel):
@@ -213,7 +215,7 @@ async def read_metrics(
         # Получаем метрики вместе с секциями
         stmt = (
             select(MetricDescription, Section.description.label("section_description"))
-            .join(Section, MetricDescription.section_id == Section.id)
+            .join(Section, MetricDescription.section_id == Section.id).where(MetricDescription.is_active == True)
             .order_by(
                 MetricDescription.section_id.asc(),
                 MetricDescription.metric_number.asc(),
@@ -253,7 +255,7 @@ async def read_metric(
         session: AsyncSession = Depends(get_async_session)
 ):
     result = await session.execute(
-        select(MetricDescription).where(MetricDescription.metric_id == metric_id)
+        select(MetricDescription).where(MetricDescription.metric_id == metric_id and MetricDescription.is_active == True)
     )
     metric = result.scalar_one_or_none()
     if not metric:
@@ -321,3 +323,107 @@ async def delete_metric(
     await session.delete(metric)
     await session.commit()
     return {"message": "Metric deleted successfully"}
+
+@router.put(
+    path="/",
+    status_code=status.HTTP_200_OK
+)
+async def update_metrics(
+    data: List[Dict],
+    session: AsyncSession = Depends(get_async_session)
+):
+    current_date = date.today()
+    
+    METRIC_FIELDS = {
+        'metric_number', 'metric_subnumber', 'description',
+        'unit_of_measurement', 'base_level', 'average_level', 'goal_level',
+        'measurement_frequency', 'conditions', 'notes', 'points',
+        'section_id', 'date_start', 'date_end', 'is_active'
+    }
+
+    try:
+        for metric_data in data:
+            # 1. Обрабатываем раздел (section) если он есть в данных
+            if 'section' in metric_data:
+                section_data = metric_data['section']
+                section_id = metric_data.get('section_id')
+                
+                if not section_id:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Metric is missing 'section_id' field"
+                    )
+                
+                # Проверяем существование раздела
+                result = await session.execute(
+                    select(Section)
+                    .where(Section.id == section_id)
+                )
+                section = result.scalar_one_or_none()
+                
+                if section:
+                    # Обновляем описание раздела, если оно изменилось
+                    if section.description != section_data['description']:
+                        await session.execute(
+                            update(Section)
+                            .where(Section.id == section_id)
+                            .values(description=section_data['description'])
+                        )
+                else:
+                    # Создаем новый раздел (если вдруг не существует)
+                    await session.execute(
+                        insert(Section)
+                        .values(
+                            id=section_id,
+                            description=section_data['description']
+                        )
+                    )
+            
+            # 2. Обновляем метрику
+            old_metric_id = metric_data.get('metric_id')
+            
+            if not old_metric_id:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Metric is missing 'metric_id' field"
+                )
+            
+            # Деактивируем старую запись метрики
+            await session.execute(
+                update(MetricDescription)
+                .where(MetricDescription.metric_id == old_metric_id)
+                .values(
+                    date_end=current_date,
+                    is_active=False
+                )
+            )
+            
+            # Создаем новую запись метрики
+            new_metric_data = {
+                k: v for k, v in metric_data.items() 
+                if k in METRIC_FIELDS  # Убрана проверка k != 'metric_id'
+            }
+            
+            # Убедимся, что metric_id не попадает в новые данные
+            new_metric_data.pop('metric_id', None)
+            
+            new_metric_data.update({
+                'date_start': current_date,
+                'is_active': True,
+                'date_end': None
+            })
+            
+            await session.execute(
+                insert(MetricDescription)
+                .values(**new_metric_data)
+            )
+        
+        await session.commit()
+        return {"status": "success", "message": "Metrics and sections updated successfully"}
+    
+    except Exception as e:
+        await session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )

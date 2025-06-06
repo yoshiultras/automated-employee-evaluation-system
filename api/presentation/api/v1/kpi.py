@@ -44,11 +44,11 @@ async def get_kpi_table(
         DepartmentsMetrics.year.label("dm_year"),
         DepartmentsMetrics.quarter.label("dm_quarter"),
         Department
-    ).select_from(unnested) \
+    ).where(MetricDescription.is_active == True).select_from(unnested) \
         .join(
         MetricDescription,
         MetricDescription.metric_id == unnested.c.metric_id
-    ) \
+    ).where(MetricDescription.is_active == True) \
         .outerjoin(
         DepartmentsMetrics,
         and_(

@@ -180,7 +180,7 @@ async def get_metrics_summary(
     )
 
     # Формируем список метрик
-    result = await session.execute(select(MetricDescription))
+    result = await session.execute(select(MetricDescription).where(MetricDescription.is_active == True))
     metrics = [
         f"{m.metric_number}{m.metric_subnumber or ''}"
         for m in result.scalars()

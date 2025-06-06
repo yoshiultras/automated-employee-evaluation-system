@@ -82,6 +82,9 @@ class MetricDescription(Base):
     notes = Column(String)
     points = Column(Integer)
     section_id = Column(Integer, ForeignKey('sections.id'))
+    date_start = Column(Date)
+    date_end = Column(Date)
+    is_active = Column(Boolean)
 
     def to_array(self):
         fields_order = [

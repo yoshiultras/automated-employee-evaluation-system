@@ -16,7 +16,7 @@ router = APIRouter()
     status_code=status.HTTP_200_OK,
     )
 async def metrics(sessions: AsyncSession = Depends(get_async_session)):
-    query = select(MetricDescription).order_by(MetricDescription.metric_number, MetricDescription.metric_subnumber)
+    query = select(MetricDescription).where(MetricDescription.is_active == True).order_by(MetricDescription.metric_number, MetricDescription.metric_subnumber)
     result = await sessions.execute(query)
     metrics = result.scalars().all()
 
@@ -35,7 +35,7 @@ async def experts(session: AsyncSession = Depends(get_async_session)):
     # 1. Загружаем MetricDescription и Section
     metrics_q = select(
         MetricDescription
-    ).order_by(
+    ).where(MetricDescription.is_active == True).order_by(
         MetricDescription.metric_number,
         MetricDescription.metric_subnumber
     )
